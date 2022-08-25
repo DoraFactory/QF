@@ -56,7 +56,7 @@ async function main() {
     SPLToken.NATIVE_MINT,
     vaultPubkey,
     angleInvestor,
-    1e9,
+    100,
     9
   );
   console.log("=> Donate", donateTxHash);
@@ -79,6 +79,15 @@ async function main() {
   } = await RegisterProject(connection, feePayer, roundPubkey, QFProgramID);
   console.log("=> Register Project 2", registerProject2TxHash);
   await printProjectInfo(connection, project2Pubkey);
+
+  // register project 3
+  let {
+    txHash: registerProject3TxHash,
+    projectPubkey: project3Pubkey,
+    owner: project3Owner,
+  } = await RegisterProject(connection, feePayer, roundPubkey, QFProgramID);
+  console.log("=> Register Project 3", registerProject3TxHash);
+  await printProjectInfo(connection, project3Pubkey);
 
   // init Alice
   let { player: Alice, playerTokenHolderPubkey: AliceTokenHolderPubkey } =
@@ -114,6 +123,21 @@ async function main() {
   console.log("=> Init Alice Projcet 2 Voter", initAliceProject2VoterTxHash);
   printVoterInfo(connection, AliceProject2VoterPubkey, "Alice Project 2 Voter");
 
+  // init Alice project 3 voter
+  let {
+    txHash: initAliceProject3VoterTxHash,
+    voterPubkey: AliceProject3VoterPubkey,
+  } = await InitVoter(
+    connection,
+    feePayer,
+    feePayer,
+    project3Pubkey,
+    AliceTokenHolderPubkey,
+    QFProgramID
+  );
+  console.log("=> Init Alice Projcet 3 Voter", initAliceProject3VoterTxHash);
+  printVoterInfo(connection, AliceProject3VoterPubkey, "Alice Project 3 Voter");
+
   // Alice vote project 1
   let { txHash: aliceVoteProject1TxHash } = await Vote(
     connection,
@@ -126,13 +150,12 @@ async function main() {
     SPLToken.NATIVE_MINT,
     vaultPubkey,
     Alice,
-    100,
+    1,
     9
   );
   console.log("=> Alice Vote Project 1", aliceVoteProject1TxHash);
   await printRoundInfo(connection, roundPubkey);
   await printProjectInfo(connection, project1Pubkey, "Project 1");
-  await printProjectInfo(connection, project2Pubkey, "Project 2");
   await printVoterInfo(
     connection,
     AliceProject1VoterPubkey,
@@ -151,12 +174,11 @@ async function main() {
     SPLToken.NATIVE_MINT,
     vaultPubkey,
     Alice,
-    25,
+    4,
     9
   );
   console.log("=> Alice Vote Project 2", aliceVoteProject2TxHash);
   await printRoundInfo(connection, roundPubkey);
-  await printProjectInfo(connection, project1Pubkey, "Project 1");
   await printProjectInfo(connection, project2Pubkey, "Project 2");
   await printVoterInfo(
     connection,
@@ -164,31 +186,93 @@ async function main() {
     "Alice Project 2 Voter"
   );
 
+  // Alice vote project 3
+  let { txHash: aliceVoteProject3TxHash } = await Vote(
+    connection,
+    feePayer,
+    QFProgramID,
+    roundPubkey,
+    project3Pubkey,
+    AliceProject3VoterPubkey,
+    AliceTokenHolderPubkey,
+    SPLToken.NATIVE_MINT,
+    vaultPubkey,
+    Alice,
+    100,
+    9
+  );
+  console.log("=> Alice Vote Project 3", aliceVoteProject3TxHash);
+  await printRoundInfo(connection, roundPubkey);
+  await printProjectInfo(connection, project3Pubkey, "Project 3");
+  await printVoterInfo(
+    connection,
+    AliceProject3VoterPubkey,
+    "Alice Project 3 Voter"
+  );
+
   // init Bob
   let { player: bob, playerTokenHolderPubkey: bobTokenHolderPubkey } =
     await InitPlayer(connection, feePayer, 1e10);
 
-  // init Bob project 1 voter
-  let { txHash: initBobProject1Voter, voterPubkey: bobProject1VoterPubkey } =
+  // init Bob project 2 voter
+  let { txHash: initBobProject2Voter, voterPubkey: bobProject2VoterPubkey } =
     await InitVoter(
       connection,
       feePayer,
       feePayer,
-      project1Pubkey,
+      project2Pubkey,
       bobTokenHolderPubkey,
       QFProgramID
     );
-  console.log("=> Init Bob Projcet 1 Voter", initBobProject1Voter);
-  printVoterInfo(connection, bobProject1VoterPubkey, "Bob Project 1 Voter");
+  console.log("=> Init Bob Projcet 2 Voter", initBobProject2Voter);
+  printVoterInfo(connection, bobProject2VoterPubkey, "Bob Project 2 Voter");
 
-  // Bob vote project 1
-  let { txHash: bobVoteProject1TxHash } = await Vote(
+  // Bob vote project 2
+  let { txHash: bobVoteProject2TxHash } = await Vote(
     connection,
     feePayer,
     QFProgramID,
     roundPubkey,
-    project1Pubkey,
-    bobProject1VoterPubkey,
+    project2Pubkey,
+    bobProject2VoterPubkey,
+    bobTokenHolderPubkey,
+    SPLToken.NATIVE_MINT,
+    vaultPubkey,
+    bob,
+    25,
+    9
+  );
+
+  console.log("=> Bob Vote Project 2", bobVoteProject2TxHash);
+  await printRoundInfo(connection, roundPubkey);
+  await printProjectInfo(connection, project2Pubkey, "Project 2");
+  await printVoterInfo(
+    connection,
+    bobProject2VoterPubkey,
+    "Bob Project 2 Voter"
+  );
+
+  // init Bob project 3 voter
+  let { txHash: initBobProject3Voter, voterPubkey: bobProject3VoterPubkey } =
+    await InitVoter(
+      connection,
+      feePayer,
+      feePayer,
+      project3Pubkey,
+      bobTokenHolderPubkey,
+      QFProgramID
+    );
+  console.log("=> Init Bob Projcet 3 Voter", initBobProject3Voter);
+  printVoterInfo(connection, bobProject3VoterPubkey, "Bob Project 3 Voter");
+
+  // Bob vote project 3
+  let { txHash: bobVoteProject3TxHash } = await Vote(
+    connection,
+    feePayer,
+    QFProgramID,
+    roundPubkey,
+    project3Pubkey,
+    bobProject3VoterPubkey,
     bobTokenHolderPubkey,
     SPLToken.NATIVE_MINT,
     vaultPubkey,
@@ -197,39 +281,13 @@ async function main() {
     9
   );
 
-  console.log("=> Bob Vote Project 1", bobVoteProject1TxHash);
+  console.log("=> Bob Vote Project 3", bobVoteProject3TxHash);
   await printRoundInfo(connection, roundPubkey);
-  await printProjectInfo(connection, project1Pubkey, "Project 1");
-  await printProjectInfo(connection, project2Pubkey, "Project 2");
+  await printProjectInfo(connection, project3Pubkey, "Project 3");
   await printVoterInfo(
     connection,
-    bobProject1VoterPubkey,
-    "Bob Project 1 Voter"
-  );
-
-  // Bob vote project 1 again
-  let { txHash: bobVoteProject1AgainTxHash } = await Vote(
-    connection,
-    feePayer,
-    QFProgramID,
-    roundPubkey,
-    project1Pubkey,
-    bobProject1VoterPubkey,
-    bobTokenHolderPubkey,
-    SPLToken.NATIVE_MINT,
-    vaultPubkey,
-    bob,
-    100,
-    9
-  );
-  console.log("=> Bob Vote Project 1 Again", bobVoteProject1AgainTxHash);
-  await printRoundInfo(connection, roundPubkey);
-  await printProjectInfo(connection, project1Pubkey, "Project 1");
-  await printProjectInfo(connection, project2Pubkey, "Project 2");
-  await printVoterInfo(
-    connection,
-    bobProject1VoterPubkey,
-    "Bob Project 1 Voter"
+    bobProject3VoterPubkey,
+    "Bob Project 3 Voter"
   );
 
   let { txHash: endRoundTxHash } = await EndRound(
@@ -273,6 +331,23 @@ async function main() {
     feePayer,
     project2WithdrawReceiverPubkey,
     "Project 2 Token Receiver"
+  );
+
+  // init project 2 withdraw receiver
+  let { playerTokenHolderPubkey: project3WithdrawReceiverPubkey } =
+    await InitPlayer(
+      connection,
+      feePayer,
+      await connection.getMinimumBalanceForRentExemption(
+        SPLToken.AccountLayout.span
+      )
+    );
+  console.log("=> Init Project 3 Token Receiver");
+  await printTokenAccount(
+    connection,
+    feePayer,
+    project3WithdrawReceiverPubkey,
+    "Project 3 Token Receiver"
   );
 
   // init owner withdraw receiver
@@ -364,6 +439,43 @@ async function main() {
   console.log("=> Withdraw Fee", withdrawFee2TxHash);
   await printRoundInfo(connection, roundPubkey);
   await printTokenAccount(connection, feePayer, vaultPubkey, "Round Vault");
+
+  let { txHash: project3WithdrawTxHash } = await Withdraw(
+    connection,
+    feePayer,
+    QFProgramID,
+    roundPubkey,
+    vaultPubkey,
+    await getVaultOwnerPubkey(roundOwner.publicKey, QFProgramID),
+    project3Pubkey,
+    project3Owner,
+    project3WithdrawReceiverPubkey
+  );
+
+  console.log("=> Project 3 Withdraw", project3WithdrawTxHash);
+  await printRoundInfo(connection, roundPubkey);
+  await printProjectInfo(connection, project3Pubkey);
+  await printTokenAccount(connection, feePayer, vaultPubkey, "Round Vault");
+  await printTokenAccount(
+    connection,
+    feePayer,
+    project3WithdrawReceiverPubkey,
+    "Project 3 Token Receiver"
+  );
+
+  let { txHash: withdrawFee3TxHash } = await WithdrawFee(
+    connection,
+    feePayer,
+    QFProgramID,
+    roundPubkey,
+    roundOwner,
+    vaultPubkey,
+    await getVaultOwnerPubkey(roundOwner.publicKey, QFProgramID),
+    roundOwnerWithdrawReceiverPubkey
+  );
+  console.log("=> Withdraw Fee", withdrawFee3TxHash);
+  await printRoundInfo(connection, roundPubkey);
+  await printTokenAccount(connection, feePayer, vaultPubkey, "Round Vault");
 }
 
 main().then(
@@ -400,7 +512,7 @@ function createStartRoundInstruction(
   dataLayout.encode(
     {
       instruction: Instruction.StartRound,
-      ratio: 20,
+      ratio: 5,
     },
     data
   );
@@ -1202,9 +1314,9 @@ type Round = {
   vault: PublicKey;
   owner: PublicKey;
   area: BN; // u256
-  total_votes: BN; // u64
-  top_votes: BN; // u256
-  min_votes: BN; // u256
+  total_area: BN; // u64
+  top_area: BN; // u256
+  min_area: BN; // u256
 };
 
 const RoundAccountDataLayout = BufferLayout.struct([
@@ -1216,10 +1328,10 @@ const RoundAccountDataLayout = BufferLayout.struct([
   BufferLayout.blob(32, "vault"),
   BufferLayout.blob(32, "owner"),
   BufferLayout.blob(32, "area"),
-  BufferLayout.blob(32, "total_votes"),
-  BufferLayout.blob(32, "top_votes"),
-  BufferLayout.blob(32, "min_votes"),
-  BufferLayout.blob(32, "min_votes_p"),
+  BufferLayout.blob(32, "total_area"),
+  BufferLayout.blob(32, "top_area"),
+  BufferLayout.blob(32, "min_area"),
+  BufferLayout.blob(32, "min_area_p"),
 ]);
 
 async function printRoundInfo(
@@ -1237,9 +1349,9 @@ async function printRoundInfo(
   console.log("fee", info.fee.toString());
   console.log("project_number", info.project_number.toString());
   console.log("area", info.area.toString());
-  console.log("total_votes", info.total_votes.toString());
-  console.log("top_votes", info.top_votes.toString());
-  console.log("min_votes", info.min_votes.toString());
+  console.log("total_area", info.total_area.toString());
+  console.log("top_area", info.top_area.toString());
+  console.log("min_area", info.min_area.toString());
   console.log("");
 }
 
@@ -1260,9 +1372,9 @@ async function getRoundInfo(
   roundInfo.vault = new PublicKey(roundInfo.vault);
   roundInfo.owner = new PublicKey(roundInfo.owner);
   roundInfo.area = new BN(roundInfo.area, 10, "le");
-  roundInfo.total_votes = new BN(roundInfo.total_votes, 10, "le");
-  roundInfo.top_votes = new BN(roundInfo.top_votes, 10, "le");
-  roundInfo.min_votes = new BN(roundInfo.min_votes, 10, "le");
+  roundInfo.total_area = new BN(roundInfo.total_area, 10, "le");
+  roundInfo.top_area = new BN(roundInfo.top_area, 10, "le");
+  roundInfo.min_area = new BN(roundInfo.min_area, 10, "le");
 
   return roundInfo;
 }

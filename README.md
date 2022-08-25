@@ -90,9 +90,9 @@ if (minVotesProject == 0 || newArea < categoryInfo.minVotes) {
 fund = round.fund
 amount = project.votes
 // ====== new
-a = round.total_votes / round.project_number 
-t = round.top_votes
-m = round.min_votes 
+a = round.total_area / round.project_number 
+t = round.top_area
+m = round.min_area 
 d = t - a + (a-m)*round.R 
 if d > 0 {
     s =  (a*(R-1))/d

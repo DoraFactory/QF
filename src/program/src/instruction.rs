@@ -26,12 +26,12 @@ impl QFInstruction {
             0 => {
                 let (ratio, _rest) = rest.split_at(1);
                 let ratio = ratio
-                  .try_into()
-                  .ok()
-                  .map(u8::from_le_bytes)
-                  .ok_or(ProgramError::InvalidInstructionData)?;
+                    .try_into()
+                    .ok()
+                    .map(u8::from_le_bytes)
+                    .ok_or(ProgramError::InvalidInstructionData)?;
                 Self::StartRound { ratio }
-            },
+            }
             1 | 4 => {
                 let (amount, rest) = rest.split_at(8);
                 let amount = amount
@@ -69,10 +69,10 @@ impl QFInstruction {
     pub fn pack(&self) -> Vec<u8> {
         let mut buf = Vec::with_capacity(size_of::<Self>());
         match self {
-            Self::StartRound{ratio} => {
+            Self::StartRound { ratio } => {
                 buf.push(0);
                 buf.extend_from_slice(&ratio.to_le_bytes());
-            },
+            }
             &Self::Donate { amount, decimals } => {
                 buf.push(1);
                 buf.extend_from_slice(&amount.to_le_bytes());

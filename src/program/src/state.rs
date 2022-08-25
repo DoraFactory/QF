@@ -34,10 +34,10 @@ pub struct Round {
     pub vault: Pubkey,
     pub owner: Pubkey,
     pub area: U256,
-    pub total_votes: U256,
-    pub top_votes: U256,
-    pub min_votes: U256,
-    pub min_votes_p: Pubkey,
+    pub total_area: U256,
+    pub top_area: U256,
+    pub min_area: U256,
+    pub min_area_p: Pubkey,
 }
 impl Sealed for Round {}
 impl IsInitialized for Round {
@@ -58,10 +58,10 @@ impl Pack for Round {
             vault,
             owner,
             area,
-            total_votes,
-            top_votes,
-            min_votes,
-            min_votes_p,
+            total_area,
+            top_area,
+            min_area,
+            min_area_p,
         ) = array_refs![src, 1, 1, 8, 8, 8, 32, 32, 32, 32, 32, 32, 32];
         Ok(Round {
             status: RoundStatus::try_from_primitive(status[0])
@@ -73,10 +73,10 @@ impl Pack for Round {
             vault: Pubkey::new_from_array(*vault),
             owner: Pubkey::new_from_array(*owner),
             area: U256::from_little_endian(area),
-            total_votes: U256::from_little_endian(total_votes),
-            top_votes: U256::from_little_endian(top_votes),
-            min_votes: U256::from_little_endian(min_votes),
-            min_votes_p:Pubkey::new_from_array(*min_votes_p),
+            total_area: U256::from_little_endian(total_area),
+            top_area: U256::from_little_endian(top_area),
+            min_area: U256::from_little_endian(min_area),
+            min_area_p: Pubkey::new_from_array(*min_area_p),
         })
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
@@ -90,11 +90,11 @@ impl Pack for Round {
             vault_dst,
             owner_dst,
             area_dst,
-            total_votes_dst,
-            top_votes_dst,
-            min_votes_dst,
-            min_votes_p_dst,
-        ) = mut_array_refs![dst, 1,1, 8, 8, 8, 32, 32, 32, 32, 32, 32,32];
+            total_area_dst,
+            top_area_dst,
+            min_area_dst,
+            min_area_p_dst,
+        ) = mut_array_refs![dst, 1, 1, 8, 8, 8, 32, 32, 32, 32, 32, 32, 32];
         let &Round {
             status,
             ratio,
@@ -104,10 +104,10 @@ impl Pack for Round {
             ref owner,
             ref vault,
             area,
-            total_votes,
-            top_votes,
-            min_votes,
-            min_votes_p,
+            total_area,
+            top_area,
+            min_area,
+            min_area_p,
         } = self;
         status_dst[0] = status as u8;
         *ratio_dst = ratio.to_le_bytes();
@@ -117,10 +117,10 @@ impl Pack for Round {
         owner_dst.copy_from_slice(owner.as_ref());
         vault_dst.copy_from_slice(vault.as_ref());
         area.to_little_endian(area_dst);
-        total_votes.to_little_endian(total_votes_dst);
-        top_votes.to_little_endian(top_votes_dst);
-        min_votes.to_little_endian(min_votes_dst);
-        min_votes_p_dst.copy_from_slice(min_votes_p.as_ref());
+        total_area.to_little_endian(total_area_dst);
+        top_area.to_little_endian(top_area_dst);
+        min_area.to_little_endian(min_area_dst);
+        min_area_p_dst.copy_from_slice(min_area_p.as_ref());
     }
 }
 
