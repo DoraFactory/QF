@@ -135,3 +135,41 @@ if (d > 0) {
 }
 total += votes * round.matchingPoolCategorial[category] / totalVotes;
 ```
+
+## Amount Adjustment
+
+```js
+cal = (
+  votes,
+  total,
+  fund = 100,
+  totalVotes = 28,
+  projectNumber = 3,
+  topVotes = 20,
+  minVotes = 1,
+  ratio = 5
+) => {
+  let a = totalVotes / projectNumber;
+  console.log("a: " + a);
+  let d = topVotes - a + (a - minVotes) * ratio;
+  console.log("d: " + d);
+  if (d > 0) {
+    let s = (a * (ratio - 1)) / d;
+    console.log("s: " + s);
+    if (s < 1) {
+      if (votes > a) {
+        votes = a + (votes - a) * s;
+      } else {
+        votes = votes + (a - votes) * (1 - s);
+      }
+      console.log("votes: " + votes);
+    }
+  }
+  total += (votes * fund) / totalVotes;
+  console.log("total: " + total);
+  let fee = total * 0.05;
+  console.log("fee: ", fee)
+  total -= fee;
+  return total;
+};
+```
