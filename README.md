@@ -10,6 +10,8 @@ a quadratic funding implementation on Solana
 5. npm run start
 6. solana airdrop 1 6RPmjwddroEbWpcZ3W4gfvwqggqtggPJo4Tc1VjtwJeg --url devnet
 7. solana program deploy target/deploy/qf.so
+
+Devnet Program Id: 9b7hCifAq7bLud7fgFWajs8i3YHzwypfg1e4j1LezYyE
    
 ## Program
 
