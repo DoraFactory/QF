@@ -8,7 +8,9 @@ a quadratic funding implementation on Solana
 3. cd src/program
 4. cargo build-bpf
 5. npm run start
-
+6. solana airdrop 1 6RPmjwddroEbWpcZ3W4gfvwqggqtggPJo4Tc1VjtwJeg --url devnet
+7. solana program deploy target/deploy/qf.so
+   
 ## Program
 
 there are some instructions in the program

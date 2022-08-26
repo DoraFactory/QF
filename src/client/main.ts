@@ -1317,6 +1317,7 @@ type Round = {
   total_area: BN; // u64
   top_area: BN; // u256
   min_area: BN; // u256
+  min_area_p: PublicKey;
 };
 
 const RoundAccountDataLayout = BufferLayout.struct([
@@ -1349,7 +1350,6 @@ async function printRoundInfo(
   console.log("fee", info.fee.toString());
   console.log("project_number", info.project_number.toString());
   console.log("area", info.area.toString());
-  console.log("total_area", info.total_area.toString());
   console.log("top_area", info.top_area.toString());
   console.log("min_area", info.min_area.toString());
   console.log("");
@@ -1372,7 +1372,6 @@ async function getRoundInfo(
   roundInfo.vault = new PublicKey(roundInfo.vault);
   roundInfo.owner = new PublicKey(roundInfo.owner);
   roundInfo.area = new BN(roundInfo.area, 10, "le");
-  roundInfo.total_area = new BN(roundInfo.total_area, 10, "le");
   roundInfo.top_area = new BN(roundInfo.top_area, 10, "le");
   roundInfo.min_area = new BN(roundInfo.min_area, 10, "le");
 
@@ -1431,6 +1430,7 @@ async function printProjectInfo(
   console.log("withdraw:", info.withdraw);
   console.log("votes", info.votes.toString());
   console.log("area", info.area.toString());
+  console.log("area_sqrt", info.area_sqrt.toString());
   console.log("");
 }
 

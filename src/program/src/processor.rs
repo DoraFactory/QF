@@ -351,21 +351,19 @@ impl Processor {
         voter.votes_sqrt = new_votes_sqrt.value;
         Voter::pack(voter, &mut voter_info.data.borrow_mut())?;
 
-        
-        let votes = U256::from(project.area).checked_div(U256::from(ONE)).unwrap();
+        let area = project.area;
 
-        if votes > round.top_area {
-            round.top_area = votes;
+        if area > round.top_area {
+            round.top_area = area;
         }
-        if round.min_area == U256::from(0) || votes < round.min_area {
-            round.min_area = votes;
+        if round.min_area == U256::from(0) || area < round.min_area {
+            round.min_area = area;
             round.min_area_p = *project_info.key;
         } else if round.min_area_p == *project_info.key {
-            round.min_area = votes;
+            round.min_area = area;
         }
 
         round.area = round.area.checked_add(project.area).unwrap();
-        round.total_area = round.area.checked_div(U256::from(ONE)).unwrap();
         Round::pack(round, &mut round_info.data.borrow_mut())?;
 
         Ok(())
@@ -415,56 +413,73 @@ impl Processor {
             &[Pubkey::find_program_address(&[&round.owner.to_bytes()], &program_id).1],
         ];
 
-
         // ============= begin of cal amount ===============
-        let mut votes = U256::from(project.area).checked_div(U256::from(ONE)).unwrap();
-        let fund = U256::from(round.fund);
+        let mut area = PreciseNumber {
+            value: project.area,
+        };
+        let fund = PreciseNumber {
+            value: U256::from(round.fund).checked_mul(U256::from(ONE)).unwrap(),
+        };
         let mut amount = U256::from(project.votes);
-        msg!("votes: {}", amount);
+        msg!("area: {}", area.value);
         msg!("amount: {}", amount);
-        msg!("fund: {}", fund);
-        msg!("totalVotes: {}", round.total_area);
+        msg!("fund: {}", fund.value);
         msg!("project_number: {}", round.project_number);
         msg!("topVotes: {}", round.top_area);
         msg!("minVotes: {}", round.min_area);
-        msg!("ratio: {}",round.ratio);
+        msg!("ratio: {}", round.ratio);
 
-        let ratio = U256::from(round.ratio);
-        if round.total_area > U256::from(0) {
-            let a = U256::from(
-                round
-                    .total_area
-                    .checked_div(U256::from(round.project_number))
+        let ratio = PreciseNumber {
+            value: U256::from(round.ratio)
+                .checked_mul(U256::from(ONE))
+                .unwrap(),
+        };
+        let one = PreciseNumber {
+            value: U256::from(ONE),
+        };
+        if round.area > U256::from(0) {
+            let a = PreciseNumber {
+                value: U256::from(round.area),
+            }
+            .checked_div(&PreciseNumber {
+                value: U256::from(round.project_number)
+                    .checked_mul(U256::from(ONE))
                     .unwrap(),
-            );
-            let t = round.top_area;
-            let m = round.min_area;
+            })
+            .unwrap();
+            msg!("a: {}", a.value);
+            let t = PreciseNumber {
+                value: round.top_area,
+            };
+            let m = PreciseNumber {
+                value: round.min_area,
+            };
             let d = t
-                .checked_sub(a)
+                .checked_sub(&a)
                 .unwrap()
-                .checked_add(a.checked_sub(m).unwrap().checked_mul(ratio).unwrap())
+                .checked_add(&a.checked_sub(&m).unwrap().checked_mul(&ratio).unwrap())
                 .unwrap();
-            msg!("d: {}", d);
-            if d > U256::from(0) {
+            msg!("d: {}", d.value);
+            if d.value > U256::from(0) {
                 let s = ratio
-                    .checked_sub(U256::from(1))
+                    .checked_sub(&one)
                     .unwrap()
-                    .checked_mul(a)
+                    .checked_mul(&a)
                     .unwrap()
-                    .checked_div(d)
+                    .checked_div(&d)
                     .unwrap();
-                msg!("s: {}", s);
-                if s < U256::from(1) {
-                    if votes > a {
-                        votes = a
-                            .checked_add(s.checked_mul(votes.checked_sub(a).unwrap()).unwrap())
+                msg!("s: {}", s.value);
+                if s.value < one.value {
+                    if area.value > a.value {
+                        area = a
+                            .checked_add(&s.checked_mul(&area.checked_sub(&a).unwrap()).unwrap())
                             .unwrap();
                     } else {
-                        votes = votes
+                        area = area
                             .checked_add(
-                                a.checked_sub(votes)
+                                &a.checked_sub(&area)
                                     .unwrap()
-                                    .checked_mul(U256::from(1) - s)
+                                    .checked_mul(&one.checked_sub(&s).unwrap())
                                     .unwrap(),
                             )
                             .unwrap();
@@ -473,11 +488,16 @@ impl Processor {
             }
         }
 
+        let cap = area
+            .checked_div(&PreciseNumber { value: round.area })
+            .unwrap();
+
         amount = amount
             .checked_add(
-                fund.checked_mul(votes)
+                fund.checked_mul(&cap)
                     .unwrap()
-                    .checked_div(round.total_area)
+                    .value
+                    .checked_div(U256::from(ONE))
                     .unwrap(),
             )
             .unwrap();
