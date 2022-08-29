@@ -10,8 +10,10 @@ a quadratic funding implementation on Solana
 5. npm run start
 6. solana airdrop 1 6RPmjwddroEbWpcZ3W4gfvwqggqtggPJo4Tc1VjtwJeg --url devnet
 7. solana program deploy target/deploy/qf.so
-
-Devnet Program Id: 9b7hCifAq7bLud7fgFWajs8i3YHzwypfg1e4j1LezYyE
+8. solana address -k target/deploy/qf-keypair.json
+9. cd ../page
+10. yarn
+11. yarn start
    
 ## Program
 
@@ -141,7 +143,7 @@ total += votes * round.matchingPoolCategorial[category] / totalVotes;
 ```js
 cal = (
   votes,
-  total,
+  total, // 用户投票给项目的总金额
   fund = 100,
   totalVotes = 28,
   projectNumber = 3,
@@ -172,4 +174,12 @@ cal = (
   total -= fee;
   return total;
 };
+```
+
+## Test Wallet
+
+```
+happy country major coin rich series naive pistol woman silent truly hill raw festival police express run asset divide express above where secret route
+
+nyxNnjLshQPVRHyeDRbL1vEo2CuDvh1rkiUgxvNT714
 ```

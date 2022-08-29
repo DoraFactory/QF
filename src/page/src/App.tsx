@@ -19,15 +19,14 @@ import Wallet from "@project-serum/sol-wallet-adapter";
 import * as BufferLayout from "buffer-layout";
 import * as SPLToken from "@solana/spl-token";
 
-const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
-
+const MINT = SPLToken.NATIVE_MINT
 export default () => {
   const programId = new PublicKey(
-    "89GCqzsFDa2Bv9cxuhHEk96r1K5W6rccVZuarw5WEber" // FIXME: you need to deploy your own program and fill it
+    "9b7hCifAq7bLud7fgFWajs8i3YHzwypfg1e4j1LezYyE" // FIXME: you need to deploy your own program and fill it
   );
 
   const [connection] = useState(
-    () => new Connection("https://api.mainnet-beta.solana.com")
+    () => new Connection("https://api.devnet.solana.com")
   );
   const [wallet] = useState(
     () => new Wallet("https://www.sollet.io")
@@ -54,11 +53,17 @@ export default () => {
 
   const RoundAccountDataLayout = BufferLayout.struct([
     BufferLayout.u8("roundStatus"),
+    BufferLayout.u8("ratio"),
     BufferLayout.blob(8, "fund"),
     BufferLayout.blob(8, "fee"),
+    BufferLayout.blob(8, "project_number"),
     BufferLayout.blob(32, "vault"),
     BufferLayout.blob(32, "owner"),
     BufferLayout.blob(32, "area"),
+    BufferLayout.blob(32, "total_area"),
+    BufferLayout.blob(32, "top_area"),
+    BufferLayout.blob(32, "min_area"),
+    BufferLayout.blob(32, "min_area_p"),
   ]);
   const [getRoundInfoPubkey, setGetRoundInfoPubkey] = useState("");
 
@@ -138,7 +143,7 @@ export default () => {
           SPLToken.Token.createInitAccountInstruction(
             SPLToken.TOKEN_PROGRAM_ID,
             // SPLToken.NATIVE_MINT,
-            USDC_MINT,
+            MINT,
             vault.publicKey,
             vaultOwnerPubkey
           )
@@ -213,62 +218,57 @@ export default () => {
     try {
       let roundInfo = await getRoundInfo(roundPubkey);
       let round = new PublicKey(roundPubkey);
+      let tmpTokenAccount = new Account();
 
-      const assoAccount = await SPLToken.Token.getAssociatedTokenAddress(
-        SPLToken.ASSOCIATED_TOKEN_PROGRAM_ID,
-        SPLToken.TOKEN_PROGRAM_ID,
-        USDC_MINT,
-        wallet.publicKey
-      )
       const tx = new Transaction()
-        // .add(
-        //   SystemProgram.createAccount({
-        //     fromPubkey: wallet.publicKey,
-        //     newAccountPubkey: tmpTokenAccount.publicKey,
-        //     lamports:
-        //       (await connection.getMinimumBalanceForRentExemption(
-        //         SPLToken.AccountLayout.span
-        //       )) + amount,
-        //     space: SPLToken.AccountLayout.span,
-        //     programId: SPLToken.TOKEN_PROGRAM_ID,
-        //   })
-        // )
-        // .add(
-        //   SPLToken.Token.createInitAccountInstruction(
-        //     SPLToken.TOKEN_PROGRAM_ID,
-        //     SPLToken.NATIVE_MINT,
-        //     tmpTokenAccount.publicKey,
-        //     wallet.publicKey
-        //   )
-        // )
+        .add(
+          SystemProgram.createAccount({
+            fromPubkey: wallet.publicKey,
+            newAccountPubkey: tmpTokenAccount.publicKey,
+            lamports:
+              (await connection.getMinimumBalanceForRentExemption(
+                SPLToken.AccountLayout.span
+              )) + amount,
+            space: SPLToken.AccountLayout.span,
+            programId: SPLToken.TOKEN_PROGRAM_ID,
+          })
+        )
+        .add(
+          SPLToken.Token.createInitAccountInstruction(
+            SPLToken.TOKEN_PROGRAM_ID,
+            SPLToken.NATIVE_MINT,
+            tmpTokenAccount.publicKey,
+            wallet.publicKey
+          )
+        )
         .add(
           donateInstruction(
             programId,
             round,
-            assoAccount,
-            USDC_MINT,
+            tmpTokenAccount.publicKey,
+            SPLToken.NATIVE_MINT,
             roundInfo.vault,
             wallet.publicKey,
             amount,
-            6
+            9
           )
         )
-        // .add(
-        //   SPLToken.Token.createCloseAccountInstruction(
-        //     SPLToken.TOKEN_PROGRAM_ID,
-        //     tmpTokenAccount.publicKey,
-        //     wallet.publicKey,
-        //     wallet.publicKey,
-        //     []
-        //   )
-        // );
+        .add(
+          SPLToken.Token.createCloseAccountInstruction(
+            SPLToken.TOKEN_PROGRAM_ID,
+            tmpTokenAccount.publicKey,
+            wallet.publicKey,
+            wallet.publicKey,
+            []
+          )
+        );
 
       let { blockhash } = await connection.getRecentBlockhash();
       tx.recentBlockhash = blockhash;
       tx.feePayer = wallet.publicKey;
 
       let signedTx = await wallet.signTransaction(tx);
-      // signedTx.partialSign(tmpTokenAccount);
+      signedTx.partialSign(tmpTokenAccount);
       let txid = await connection.sendRawTransaction(signedTx.serialize());
 
       appendOutput("wait for donate");
@@ -284,7 +284,7 @@ export default () => {
       let assoAccount = await SPLToken.Token.getAssociatedTokenAddress(
         SPLToken.ASSOCIATED_TOKEN_PROGRAM_ID,
         SPLToken.TOKEN_PROGRAM_ID,
-        new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+        SPLToken.NATIVE_MINT,
         wallet.publicKey
       );
       let voterPubkey = await getVoterPubkey(
@@ -689,16 +689,15 @@ export default () => {
   }
 
   async function test(publicKey: string) {
-    const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
     try {
       let assoAccount = await SPLToken.Token.getAssociatedTokenAddress(
         SPLToken.ASSOCIATED_TOKEN_PROGRAM_ID,
         SPLToken.TOKEN_PROGRAM_ID,
-        USDC_MINT,
+        MINT,
         new PublicKey(publicKey),
       );
       let accountInfo = await connection.getTokenAccountsByOwner(new PublicKey(publicKey), {
-        mint: USDC_MINT,
+        mint: MINT,
       })
       
       console.log(accountInfo.value[0].pubkey.toBase58())
@@ -937,12 +936,16 @@ function createStartRoundInstruction(
   ownerPubkey: PublicKey,
   vaultPubkey: PublicKey
 ): TransactionInstruction {
-  const dataLayout = BufferLayout.struct([BufferLayout.u8("instruction")]);
+  const dataLayout = BufferLayout.struct([
+    BufferLayout.u8("instruction"), 
+    BufferLayout.u8("ratio"),
+  ]);
 
   const data = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
     {
       instruction: Instruction.StartRound,
+      ratio: 20,
     },
     data
   );
@@ -1002,7 +1005,7 @@ function registerProjectInstruction(
     {
       pubkey: roundPubkey,
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
     },
     {
       pubkey: projectOwnerPubkey,
