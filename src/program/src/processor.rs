@@ -437,52 +437,54 @@ impl Processor {
         let one = PreciseNumber {
             value: U256::from(ONE),
         };
-        if round.area > U256::from(0) {
-            let a = PreciseNumber {
-                value: U256::from(round.area),
-            }
-            .checked_div(&PreciseNumber {
-                value: U256::from(round.project_number)
-                    .checked_mul(U256::from(ONE))
-                    .unwrap(),
-            })
-            .unwrap();
-            msg!("a: {}", a.value);
-            let t = PreciseNumber {
-                value: round.top_area,
-            };
-            let m = PreciseNumber {
-                value: round.min_area,
-            };
-            let d = t
-                .checked_sub(&a)
-                .unwrap()
-                .checked_add(&a.checked_sub(&m).unwrap().checked_mul(&ratio).unwrap())
+        if project.area > U256::from(0) {
+            if round.area > U256::from(0) {
+                let a = PreciseNumber {
+                    value: U256::from(round.area),
+                }
+                .checked_div(&PreciseNumber {
+                    value: U256::from(round.project_number)
+                        .checked_mul(U256::from(ONE))
+                        .unwrap(),
+                })
                 .unwrap();
-            msg!("d: {}", d.value);
-            if d.value > U256::from(0) {
-                let s = ratio
-                    .checked_sub(&one)
+                msg!("a: {}", a.value);
+                let t = PreciseNumber {
+                    value: round.top_area,
+                };
+                let m = PreciseNumber {
+                    value: round.min_area,
+                };
+                let d = t
+                    .checked_sub(&a)
                     .unwrap()
-                    .checked_mul(&a)
-                    .unwrap()
-                    .checked_div(&d)
+                    .checked_add(&a.checked_sub(&m).unwrap().checked_mul(&ratio).unwrap())
                     .unwrap();
-                msg!("s: {}", s.value);
-                if s.value < one.value {
-                    if area.value > a.value {
-                        area = a
-                            .checked_add(&s.checked_mul(&area.checked_sub(&a).unwrap()).unwrap())
-                            .unwrap();
-                    } else {
-                        area = area
-                            .checked_add(
-                                &a.checked_sub(&area)
-                                    .unwrap()
-                                    .checked_mul(&one.checked_sub(&s).unwrap())
-                                    .unwrap(),
-                            )
-                            .unwrap();
+                msg!("d: {}", d.value);
+                if d.value > U256::from(0) {
+                    let s = ratio
+                        .checked_sub(&one)
+                        .unwrap()
+                        .checked_mul(&a)
+                        .unwrap()
+                        .checked_div(&d)
+                        .unwrap();
+                    msg!("s: {}", s.value);
+                    if s.value < one.value {
+                        if area.value > a.value {
+                            area = a
+                                .checked_add(&s.checked_mul(&area.checked_sub(&a).unwrap()).unwrap())
+                                .unwrap();
+                        } else {
+                            area = area
+                                .checked_add(
+                                    &a.checked_sub(&area)
+                                        .unwrap()
+                                        .checked_mul(&one.checked_sub(&s).unwrap())
+                                        .unwrap(),
+                                )
+                                .unwrap();
+                        }
                     }
                 }
             }
@@ -655,16 +657,10 @@ impl Processor {
         }
         let mut project = Project::unpack(&project_info.data.borrow())?;
 
-        project.area = project.area.checked_sub(ban_amount).unwrap();
-        project.area_sqrt = PreciseNumber {
-            value: project.area.checked_div(U256::from(ONE)).unwrap(),
-        }
-        .sqrt()
-        .unwrap()
-        .value
-        .checked_mul(U256::from(1000000))
-        .unwrap();
-        round.area = round.area.checked_sub(ban_amount).unwrap();
+        round.area = round.area.checked_sub(project.area).unwrap();
+        project.area = 0;
+        project.area_sqrt = 0;
+        round.project_number = round.project_number.checked_sub(1).unwrap();
 
         Round::pack(round, &mut round_info.data.borrow_mut())?;
         Project::pack(project, &mut project_info.data.borrow_mut())?;
