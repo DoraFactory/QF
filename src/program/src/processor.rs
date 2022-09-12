@@ -630,7 +630,7 @@ impl Processor {
     pub fn process_ban_project(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        ban_amount: U256,
+        _ban_amount: U256,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let round_info = next_account_info(account_info_iter)?;
@@ -658,8 +658,8 @@ impl Processor {
         let mut project = Project::unpack(&project_info.data.borrow())?;
 
         round.area = round.area.checked_sub(project.area).unwrap();
-        project.area = 0;
-        project.area_sqrt = 0;
+        project.area = U256::from(0);
+        project.area_sqrt = U256::from(0);
         round.project_number = round.project_number.checked_sub(1).unwrap();
 
         Round::pack(round, &mut round_info.data.borrow_mut())?;
