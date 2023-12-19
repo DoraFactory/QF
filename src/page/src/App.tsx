@@ -10,11 +10,12 @@ import {
   Account,
 } from "@solana/web3.js";
 import React, { useState } from "react";
+import bs58 from 'bs58'
 
 // @ts-ignore
 import BN from "bn.js";
 // @ts-ignore
-import Wallet from "@project-serum/sol-wallet-adapter";
+// import Wallet from "@project-serum/sol-wallet-adapter";
 // @ts-ignore
 import * as BufferLayout from "buffer-layout";
 import * as SPLToken from "@solana/spl-token";
@@ -22,15 +23,17 @@ import * as SPLToken from "@solana/spl-token";
 const MINT = SPLToken.NATIVE_MINT
 export default () => {
   const programId = new PublicKey(
-    "9b7hCifAq7bLud7fgFWajs8i3YHzwypfg1e4j1LezYyE" // FIXME: you need to deploy your own program and fill it
+    "Ft2m4YT7MHJwM3LLTj19NnVMCSPJ2XBngkRsHdRWfMUb" // FIXME: you need to deploy your own program and fill it
   );
 
   const [connection] = useState(
-    () => new Connection("https://api.devnet.solana.com")
+    // () => new Connection("https://aged-intensive-bird.solana-mainnet.quiknode.pro/e7b510fe077d260826894f431fcb9e708d0b1e8c/")
+    () => new Connection("https://api.mainnet-beta.solana.com")
   );
-  const [wallet] = useState(
-    () => new Wallet("https://www.sollet.io")
-  );
+  const [connected, setConnected] = useState(false)
+  // const [wallet] = useState(
+  //   () => new Wallet("https://www.sollet.io")
+  // );
   const [pubkey, setPubkey] = useState(PublicKey.default);
 
   const [registerProjectRoundPubkey, setRegisterProjectRoundPubkey] = useState(
@@ -88,22 +91,41 @@ export default () => {
     setOutput((prev) => output + "\n" + prev);
   }
 
+  const slope = new window.Slope()
+
+  const signTransaction = async (tx: Transaction) => {
+    await slope.connect()
+    const message = bs58.encode(tx.serializeMessage())
+    const { data } = await slope.signTransaction(message)
+
+    if (!data.publicKey || !data.signature) return tx
+
+    const publicKey = new PublicKey(data.publicKey)
+    const signature = bs58.decode(data.signature)
+
+    tx.addSignature(publicKey, Buffer.from(signature))
+    return tx
+  }
+
   async function connectWallet() {
     try {
-      if (wallet.connected) {
-        return;
-      }
-      wallet.on("connect", (publicKey: PublicKey) => {
-        console.log("Connected to " + publicKey.toBase58());
-        setPubkey(publicKey);
-      });
-      wallet.on("disconnect", () => {
-        console.log("Disconnected");
-        setPubkey(PublicKey.default);
-      });
+      // if (wallet.connected) {
+      //   return;
+      // }
+      // wallet.on("connect", (publicKey: PublicKey) => {
+      //   console.log("Connected to " + publicKey.toBase58());
+      //   setPubkey(publicKey);
+      // });
+      // wallet.on("disconnect", () => {
+      //   console.log("Disconnected");
+      //   setPubkey(PublicKey.default);
+      // });
 
-      await wallet.connect();
-    } catch (e) {
+      // await wallet.connect();
+      const res = await slope.connect()
+      setPubkey(new PublicKey(res.data.publicKey))
+      setConnected(true)
+    } catch (e: any) {
       appendOutput("connect wallet error:" + e.message);
     }
   }
@@ -112,14 +134,14 @@ export default () => {
     try {
       let vault = new Account();
       let vaultOwnerPubkey = await getVaultOwnerPubkey(
-        wallet.publicKey,
+        pubkey,
         programId
       );
       let round = new Account();
       const tx = new Transaction()
         .add(
           SystemProgram.createAccount({
-            fromPubkey: wallet.publicKey,
+            fromPubkey: pubkey,
             newAccountPubkey: round.publicKey,
             lamports: await connection.getMinimumBalanceForRentExemption(
               RoundAccountDataLayout.span
@@ -130,7 +152,7 @@ export default () => {
         )
         .add(
           SystemProgram.createAccount({
-            fromPubkey: wallet.publicKey,
+            fromPubkey: pubkey,
             newAccountPubkey: vault.publicKey,
             lamports: await connection.getMinimumBalanceForRentExemption(
               SPLToken.AccountLayout.span
@@ -152,23 +174,23 @@ export default () => {
           createStartRoundInstruction(
             programId,
             round.publicKey,
-            wallet.publicKey,
+            pubkey,
             vault.publicKey
           )
         );
 
       let { blockhash } = await connection.getRecentBlockhash();
       tx.recentBlockhash = blockhash;
-      tx.feePayer = wallet.publicKey;
+      tx.feePayer = pubkey;
 
-      let signedTx = await wallet.signTransaction(tx);
+      let signedTx = await signTransaction(tx);
       signedTx.partialSign(round, vault);
       let txid = await connection.sendRawTransaction(signedTx.serialize());
 
       appendOutput("wait for New Round");
       await connection.confirmTransaction(txid);
       appendOutput("new round pubkey: " + round.publicKey.toBase58());
-    } catch (e) {
+    } catch (e: any) {
       appendOutput("new round error:" + e.message);
     }
   }
@@ -181,7 +203,7 @@ export default () => {
       const tx = new Transaction()
         .add(
           SystemProgram.createAccount({
-            fromPubkey: wallet.publicKey,
+            fromPubkey: pubkey,
             newAccountPubkey: project.publicKey,
             lamports: await connection.getMinimumBalanceForRentExemption(
               ProjectAccountDataLayout.span
@@ -195,21 +217,21 @@ export default () => {
             programId,
             project.publicKey,
             round,
-            wallet.publicKey
+            pubkey
           )
         );
 
       let { blockhash } = await connection.getRecentBlockhash();
       tx.recentBlockhash = blockhash;
-      tx.feePayer = wallet.publicKey;
-      let signedTx = await wallet.signTransaction(tx);
+      tx.feePayer = pubkey;
+      let signedTx = await signTransaction(tx);
       signedTx.partialSign(project);
       let txid = await connection.sendRawTransaction(signedTx.serialize());
 
       appendOutput("wait for register project");
       await connection.confirmTransaction(txid);
       appendOutput("project pubkey: " + project.publicKey.toBase58());
-    } catch (e) {
+    } catch (e: any) {
       appendOutput("register project error:" + e.message);
     }
   }
@@ -223,7 +245,7 @@ export default () => {
       const tx = new Transaction()
         .add(
           SystemProgram.createAccount({
-            fromPubkey: wallet.publicKey,
+            fromPubkey: pubkey,
             newAccountPubkey: tmpTokenAccount.publicKey,
             lamports:
               (await connection.getMinimumBalanceForRentExemption(
@@ -238,7 +260,7 @@ export default () => {
             SPLToken.TOKEN_PROGRAM_ID,
             SPLToken.NATIVE_MINT,
             tmpTokenAccount.publicKey,
-            wallet.publicKey
+            pubkey
           )
         )
         .add(
@@ -248,7 +270,7 @@ export default () => {
             tmpTokenAccount.publicKey,
             SPLToken.NATIVE_MINT,
             roundInfo.vault,
-            wallet.publicKey,
+            pubkey,
             amount,
             9
           )
@@ -257,24 +279,24 @@ export default () => {
           SPLToken.Token.createCloseAccountInstruction(
             SPLToken.TOKEN_PROGRAM_ID,
             tmpTokenAccount.publicKey,
-            wallet.publicKey,
-            wallet.publicKey,
+            pubkey,
+            pubkey,
             []
           )
         );
 
       let { blockhash } = await connection.getRecentBlockhash();
       tx.recentBlockhash = blockhash;
-      tx.feePayer = wallet.publicKey;
+      tx.feePayer = pubkey;
 
-      let signedTx = await wallet.signTransaction(tx);
+      let signedTx = await signTransaction(tx);
       signedTx.partialSign(tmpTokenAccount);
       let txid = await connection.sendRawTransaction(signedTx.serialize());
 
       appendOutput("wait for donate");
       await connection.confirmTransaction(txid);
       appendOutput("donate success");
-    } catch (e) {
+    } catch (e: any) {
       appendOutput(e.message);
     }
   }
@@ -285,7 +307,7 @@ export default () => {
         SPLToken.ASSOCIATED_TOKEN_PROGRAM_ID,
         SPLToken.TOKEN_PROGRAM_ID,
         SPLToken.NATIVE_MINT,
-        wallet.publicKey
+        pubkey
       );
       let voterPubkey = await getVoterPubkey(
         new PublicKey(projectPubkey),
@@ -305,21 +327,21 @@ export default () => {
           voterPubkey,
           assoAccount,
           new PublicKey(projectPubkey),
-          wallet.publicKey
+          pubkey
         )
       );
 
       let { blockhash } = await connection.getRecentBlockhash();
       tx.recentBlockhash = blockhash;
-      tx.feePayer = wallet.publicKey;
+      tx.feePayer = pubkey;
 
-      let signedTx = await wallet.signTransaction(tx);
+      let signedTx = await signTransaction(tx);
       let txid = await connection.sendRawTransaction(signedTx.serialize());
 
       appendOutput("wait for init voter");
       await connection.confirmTransaction(txid);
       appendOutput("voter " + voterPubkey.toBase58() + " init success");
-    } catch (e) {
+    } catch (e: any) {
       appendOutput(e.message);
     }
   }
@@ -330,7 +352,7 @@ export default () => {
         SPLToken.ASSOCIATED_TOKEN_PROGRAM_ID,
         SPLToken.TOKEN_PROGRAM_ID,
         SPLToken.NATIVE_MINT,
-        wallet.publicKey
+        pubkey
       );
       let voterPubkey = await getVoterPubkey(
         new PublicKey(projectPubkey),
@@ -358,13 +380,13 @@ export default () => {
           connection,
           SPLToken.NATIVE_MINT,
           SPLToken.TOKEN_PROGRAM_ID,
-          wallet.publicKey
+          pubkey as any
         ).getAccountInfo(assoAccount);
         if (accountInfo.amount < new BN(amount)) {
           tmpTokenAccount = new Account();
           tx.add(
             SystemProgram.createAccount({
-              fromPubkey: wallet.publicKey,
+              fromPubkey: pubkey,
               newAccountPubkey: tmpTokenAccount.publicKey,
               lamports:
                 (await SPLToken.Token.getMinBalanceRentForExemptAccount(
@@ -379,7 +401,7 @@ export default () => {
                 SPLToken.TOKEN_PROGRAM_ID,
                 SPLToken.NATIVE_MINT,
                 tmpTokenAccount.publicKey,
-                wallet.publicKey
+                pubkey
               )
             )
             .add(
@@ -387,7 +409,7 @@ export default () => {
                 SPLToken.TOKEN_PROGRAM_ID,
                 tmpTokenAccount.publicKey,
                 assoAccount,
-                wallet.publicKey,
+                pubkey,
                 [],
                 amount
               )
@@ -396,13 +418,13 @@ export default () => {
               SPLToken.Token.createCloseAccountInstruction(
                 SPLToken.TOKEN_PROGRAM_ID,
                 tmpTokenAccount.publicKey,
-                wallet.publicKey,
-                wallet.publicKey,
+                pubkey,
+                pubkey,
                 []
               )
             );
         }
-      } catch (e) {
+      } catch (e: any) {
         if (e.message === "Failed to find account") {
           tmpTokenAccount = new Account();
           tx.add(
@@ -411,13 +433,13 @@ export default () => {
               SPLToken.TOKEN_PROGRAM_ID,
               SPLToken.NATIVE_MINT,
               assoAccount,
-              wallet.publicKey,
-              wallet.publicKey
+              pubkey,
+              pubkey
             )
           )
             .add(
               SystemProgram.createAccount({
-                fromPubkey: wallet.publicKey,
+                fromPubkey: pubkey,
                 newAccountPubkey: tmpTokenAccount.publicKey,
                 lamports:
                   (await SPLToken.Token.getMinBalanceRentForExemptAccount(
@@ -432,7 +454,7 @@ export default () => {
                 SPLToken.TOKEN_PROGRAM_ID,
                 SPLToken.NATIVE_MINT,
                 tmpTokenAccount.publicKey,
-                wallet.publicKey
+                pubkey
               )
             )
             .add(
@@ -440,7 +462,7 @@ export default () => {
                 SPLToken.TOKEN_PROGRAM_ID,
                 tmpTokenAccount.publicKey,
                 assoAccount,
-                wallet.publicKey,
+                pubkey,
                 [],
                 amount
               )
@@ -449,8 +471,8 @@ export default () => {
               SPLToken.Token.createCloseAccountInstruction(
                 SPLToken.TOKEN_PROGRAM_ID,
                 tmpTokenAccount.publicKey,
-                wallet.publicKey,
-                wallet.publicKey,
+                pubkey,
+                pubkey,
                 []
               )
             );
@@ -469,7 +491,7 @@ export default () => {
           assoAccount,
           SPLToken.NATIVE_MINT,
           roundInfo.vault,
-          wallet.publicKey,
+          pubkey,
           amount,
           9
         )
@@ -477,17 +499,17 @@ export default () => {
 
       let { blockhash } = await connection.getRecentBlockhash();
       tx.recentBlockhash = blockhash;
-      tx.feePayer = wallet.publicKey;
+      tx.feePayer = pubkey;
       let signedTx;
       if (tmpTokenAccount !== undefined) {
         signedTx = await tx.partialSign(tmpTokenAccount);
       }
-      signedTx = await wallet.signTransaction(tx);
+      signedTx = await signTransaction(tx);
       let txid = await connection.sendRawTransaction(signedTx.serialize());
       appendOutput("wait for vote");
       await connection.confirmTransaction(txid);
       appendOutput("vote success");
-    } catch (e) {
+    } catch (e: any) {
       appendOutput("vote error: " + e.message);
     }
   }
@@ -504,21 +526,21 @@ export default () => {
           roundInfo.vault,
           vaultOwner,
           new PublicKey(projectPubkey),
-          wallet.publicKey,
+          pubkey,
           new PublicKey(toPubkey)
         )
       );
       let { blockhash } = await connection.getRecentBlockhash();
       tx.recentBlockhash = blockhash;
-      tx.feePayer = wallet.publicKey;
+      tx.feePayer = pubkey;
 
-      let signedTx = await wallet.signTransaction(tx);
+      let signedTx = await signTransaction(tx);
       let txid = await connection.sendRawTransaction(signedTx.serialize());
 
       appendOutput("wait for withdraw");
       await connection.confirmTransaction(txid);
       appendOutput("widraw success");
-    } catch (e) {
+    } catch (e: any) {
       appendOutput(e.message);
     }
   }
@@ -527,18 +549,18 @@ export default () => {
     try {
       let round = new PublicKey(roundPubkey);
       const tx = new Transaction().add(
-        endRoundInstruction(programId, round, wallet.publicKey)
+        endRoundInstruction(programId, round, pubkey)
       );
       let { blockhash } = await connection.getRecentBlockhash();
       tx.recentBlockhash = blockhash;
-      tx.feePayer = wallet.publicKey;
+      tx.feePayer = pubkey;
 
-      let signedTx = await wallet.signTransaction(tx);
+      let signedTx = await signTransaction(tx);
       let txid = await connection.sendRawTransaction(signedTx.serialize());
       appendOutput("wait for end round");
       await connection.confirmTransaction(txid);
       appendOutput("end round " + roundPubkey + " success");
-    } catch (e) {
+    } catch (e: any) {
       appendOutput(e.message);
     }
   }
@@ -559,15 +581,15 @@ export default () => {
       );
       let { blockhash } = await connection.getRecentBlockhash();
       tx.recentBlockhash = blockhash;
-      tx.feePayer = wallet.publicKey;
+      tx.feePayer = pubkey;
 
-      let signedTx = await wallet.signTransaction(tx);
+      let signedTx = await signTransaction(tx);
       let txid = await connection.sendRawTransaction(signedTx.serialize());
 
       appendOutput("wait for withdraw fee");
       await connection.confirmTransaction(txid);
       appendOutput("withdraw fee success");
-    } catch (e) {
+    } catch (e: any) {
       appendOutput(e.message);
     }
   }
@@ -581,7 +603,7 @@ export default () => {
         banProjectInstruction(
           programId,
           projectInfo.round,
-          wallet.publicKey,
+          pubkey,
           new PublicKey(projectPubkey),
           amount,
         )
@@ -589,14 +611,14 @@ export default () => {
 
       let { blockhash } = await connection.getRecentBlockhash();
       tx.recentBlockhash = blockhash;
-      tx.feePayer = wallet.publicKey;
+      tx.feePayer = pubkey;
       let signedTx;
-      signedTx = await wallet.signTransaction(tx);
+      signedTx = await signTransaction(tx);
       let txid = await connection.sendRawTransaction(signedTx.serialize());
       appendOutput("wait for ban project");
       await connection.confirmTransaction(txid);
       appendOutput("ban project success");
-    } catch (e) {
+    } catch (e: any) {
       appendOutput("ban project error: " + e.message);
     }
   }
@@ -616,18 +638,30 @@ export default () => {
       encodeInfo.vault = new PublicKey(encodeInfo.vault);
       encodeInfo.owner = new PublicKey(encodeInfo.owner);
       encodeInfo.area = new BN(encodeInfo.area, 10, "le");
+      encodeInfo.project_number = new BN(encodeInfo.project_number, 10, "le");
+
+      encodeInfo.total_area = new BN(encodeInfo.total_area, 10, "le");
+      encodeInfo.top_area = new BN(encodeInfo.top_area, 10, "le");
+      encodeInfo.min_area = new BN(encodeInfo.min_area, 10, "le");
 
       appendOutput(`
       ================ Round ================\n
       status: ${encodeInfo.roundStatus}\n
+      ratio: ${encodeInfo.ratio}\n
       owner: ${encodeInfo.owner.toBase58()}\n
       vault: ${encodeInfo.vault.toBase58()}\n
       fund: ${encodeInfo.fund.toString()}\n
       fee: ${encodeInfo.fee.toString()}\n
-      area: ${encodeInfo.area.toString()}`);
+      area: ${encodeInfo.area.toString()}\n
+      projecrs: ${encodeInfo.project_number.toString()}\n
+  
+      total_area: ${encodeInfo.total_area.toString()}\n
+      top_area: ${encodeInfo.top_area.toString()}\n
+      min_area: ${encodeInfo.min_area.toString()}
+      `);
 
       return encodeInfo;
-    } catch (e) {
+    } catch (e: any) {
       appendOutput(e.message);
     }
   }
@@ -660,7 +694,7 @@ export default () => {
       area_sqrt: ${encodeInfo.area_sqrt.toString()}`);
 
       return encodeInfo;
-    } catch (e) {
+    } catch (e: any) {
       appendOutput(e.message);
     }
   }
@@ -683,7 +717,7 @@ export default () => {
       votes: ${encodeInfo.votes.toString()}\n
       votes sqrt: ${encodeInfo.votes_sqrt.toString()}`);
       return encodeInfo;
-    } catch (e) {
+    } catch (e: any) {
       appendOutput(e.message);
     }
   }
@@ -703,7 +737,7 @@ export default () => {
       console.log(accountInfo.value[0].pubkey.toBase58())
 
       appendOutput(assoAccount.toBase58())
-    } catch (e) {
+    } catch (e: any) {
       appendOutput(e.message);
     }
   }
@@ -714,14 +748,14 @@ export default () => {
         <h1>Connect Wallet</h1>
       </div>
       <button onClick={() => connectWallet()}>
-        {wallet.connected
+        {connected
           ? "connect to:" + pubkey.toBase58()
           : "connect wallet"}
       </button>
       <div>
         <h1>Instruction</h1>
       </div>
-      {wallet.connected ? (
+      {connected ? (
         <div>
           <div>
             <button onClick={() => newRound()}>New Round</button>
