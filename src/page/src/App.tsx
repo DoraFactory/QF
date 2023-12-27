@@ -27,8 +27,8 @@ export default () => {
   );
 
   const [connection] = useState(
-    // () => new Connection("https://aged-intensive-bird.solana-mainnet.quiknode.pro/e7b510fe077d260826894f431fcb9e708d0b1e8c/")
-    () => new Connection("https://api.mainnet-beta.solana.com")
+    () => new Connection("https://lively-few-snowflake.solana-mainnet.quiknode.pro/cac5e7601f9cd69add18a2ff66f41047a0fb3229/")
+    // () => new Connection("https://api.mainnet-beta.solana.com")
   );
   const [connected, setConnected] = useState(false)
   // const [wallet] = useState(
